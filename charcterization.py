@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import time
-import glob
 import tkinter as tk
 from tkinter import filedialog
 import cv2
@@ -19,6 +18,7 @@ import matplotlib as mpl
 import matplotlib.cm as cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+from utilities import *
 
 # Here you should define the paths on your computer 
 working_dir = '/Users/tmr96/Documents/Automatic'
@@ -45,43 +45,6 @@ correlation_descriptors = ['S2', 'Cluster', 'Lineal Path', 'Angular Chord Length
 
 def init_dirs() :
     create_dir(imgchar_path)
-
-# Returns the list of images in a folder
-def images_folder(images_path) :
-    return [os.path.basename(image) for image in glob.glob(images_path + '/*.png')] # Retrieves all the names of the images in the images folder
-
-
-    
-#Returns the name of a file without the extension
-def rm_ext(file) :
-    name, ext = os.path.splitext(file)
-    return name
-
-
-# Creates a directory if it does not exist
-def create_dir(path) :
-    exists = os.path.exists(path)
-    if not exists :
-        os.makedirs(path)
-    return not exists
-
-
-# Removes any element of list1 that already is in list2 
-def filter_list(list1, list2) :
-    index = []
-    
-    for x, element in enumerate(list1) :
-        for k in list2 :
-            if rm_ext(element) == rm_ext(k) :
-                if not x in index :
-                    index.append(x)
-    
-    index.sort()
-    
-    for i in reversed(index) :
-        list1.pop(i)
-      
-    return list1
 
 
 # Reomves all the inclusions with a 0 area for every image in the images_path folder
