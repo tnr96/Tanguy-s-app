@@ -2040,7 +2040,7 @@ def main () :
     fen = tk.Tk()
     
     width = 800
-    height = 770
+    height = 600
     
     screen_width = fen.winfo_screenwidth()
     screen_height = fen.winfo_screenheight()
