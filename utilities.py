@@ -3,6 +3,7 @@ import glob
 import matplotlib.pyplot as plt
 import sys
 import tkinter as tk
+from tkinter import filedialog
 
 # Returns the list of images in a folder
 def images_folder(images_path) :
@@ -246,3 +247,111 @@ def popup(text_input, time=0) :
     close_btn = tk.Button(p, text='OK', command=p.destroy)
     close_btn.pack()
     
+
+def what_descriptor(fen) :
+    p = tk.Toplevel(fen)
+    
+    
+    p.wm_title('Choose descriptor')
+    var = tk.StringVar(p)
+    var.set('')
+    
+    def btn(string) :
+        var.set(string)
+        label2.config(text='Current value : {}'.format(var.get()))
+        
+    label1 = tk.Label(p, text='For what descriptor do you want to see the results ?')
+    label1.pack()
+    
+    label2 = tk.Label(p, text='Current value : {}'.format(var.get()))
+    label2.pack()
+    
+    #['Aspect ratio', 'Rectangularity', 'Size', 'Orientation', 'Solidity']
+    
+    ar_btn = tk.Button(p, text='Aspect ratio', command = lambda : btn('Aspect ratio'))
+    ar_btn.pack()
+    
+    rect_btn = tk.Button(p, text='Rectangularity', command = lambda : btn('Rectangularity'))
+    rect_btn.pack()
+    
+    size_btn = tk.Button(p, text='Size', command = lambda : btn('Size'))
+    size_btn.pack()
+    
+    or_btn = tk.Button(p, text='Orientation', command = lambda : btn('Orientation'))
+    or_btn.pack()
+    
+    sol_btn = tk.Button(p, text='Solidity', command = lambda : btn('Solidity'))
+    sol_btn.pack()
+    
+    ok_btn = tk.Button(p, text='Ok', command =p.destroy)
+    ok_btn.pack()
+    
+    fen.wait_window(p) 
+    
+    return var.get()
+
+
+# To choose working directory
+def choose_wd() :
+    global working_dir
+    working_dir = filedialog.askdirectory(initialdir=working_dir)
+    
+    
+
+def convert_moment(list_input) :
+    result = []
+    for l in list_input :
+        l = l.replace(' EMD ', '')
+        l = l.replace('Frobenius norm', '')
+        l = l.replace('  ', ' ')
+        l = l.replace('moment of order 1', 'Mean')
+        l = l.replace('moment of order 2', 'Variance')
+        l = l.replace('moment of order 3', 'Skewness')
+        result.append(l)
+        
+    return result
+
+
+# Convert the matrix index to tensor index in the 2D case
+def indexm_to_indext(line, column) :
+    a = 0
+    b = 0
+    if line == 0 :
+        a = 11
+    elif line == 1 :
+        a = 22
+    elif line == 2 :
+        a = 21
+    if column == 0 :
+        b = 11
+    elif column == 1 :
+        b = 22
+    elif column == 2 :
+        b = 21
+        
+    return (a,b)
+
+
+# Takes a string iklj and returns (line, column)
+def indext_to_indexm(index) :
+    a = index[0:2]
+    b = index[2:4]
+    line = 0
+    column = 0
+    
+    if a == '11' :
+        line = 0
+    elif a == '22' :
+        line = 1
+    elif a == '21' :
+        line = 2
+        
+    if b == '11' :
+        column = 0
+    elif b == '22' :
+        column = 1
+    elif b == '21' :
+        column = 2  
+        
+    return (line, column)      
+  

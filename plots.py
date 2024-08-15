@@ -2,10 +2,8 @@ import os
 import subprocess
 import numpy as np
 import time
-import glob
 import tkinter as tk
 from tkinter import ttk
-from tkinter import filedialog
 import matplotlib.pyplot as plt
 from scipy.stats import (wasserstein_distance, wasserstein_distance_nd)
 from threading import Thread
@@ -42,11 +40,17 @@ filtered_path = working_dir + '/filtered_images'
 cutoff_input = 160
 
 # Solidity is removed for the moment
-descriptors_name = ['Aspect ratio', 'Extent', 'Size', 'Orientation', 'Solidity'] # List of descriptors used. Be careful with the order
+descriptors_name = ['Aspect ratio', 'Rectangularity', 'Size', 'Orientation', 'Solidity'] # List of descriptors used. Be careful with the order
 descriptors_max = {'aspect_ratio' : 1, 'extent' : 1, 'size': 50, 'orientation' : 180, 'solidity' : 1, 's2' : 1, 'cluster' : 1, 'lp' : 1, 'cld angular' : 1}  # The maximum value of a descriptor. Useful for plotting. Maybe replace it with a case by case max search. 
 # Max size to be discussed
 descriptor_sampling = 20 # Number of classes in which to divide each descriptor
 correlation_descriptors = ['S2', 'Cluster', 'Lineal Path', 'Angular Chord Length Distribution']
+
+
+samples_names = ['REAL', 'SYNR', 'SYNO']
+perturbations_names = ['ANI-20', 'ANI-40', 'ISO-20', 'ISO-40', 'DEL-20', 'DEL-40']
+tests_names = perturbations_names.copy()
+tests_names.insert(0, 'REF')
 
 # It is necessary to specify the cutoff beforehand if we want to calculate the stiffness as a function of S2 in a given direction
 
@@ -564,49 +568,7 @@ def compute_error_correlation_fullname(t1, t2, dir1, dir2, m, n) :
     
     return [emd, delta_t]
     
-# Convert the matrix index to tensor index in the 2D case
-def indexm_to_indext(line, column) :
-    a = 0
-    b = 0
-    if line == 0 :
-        a = 11
-    elif line == 1 :
-        a = 22
-    elif line == 2 :
-        a = 21
-    if column == 0 :
-        b = 11
-    elif column == 1 :
-        b = 22
-    elif column == 2 :
-        b = 21
-        
-    return (a,b)
-
-
-# Takes a string iklj and returns (line, column)
-def indext_to_indexm(index) :
-    a = index[0:2]
-    b = index[2:4]
-    line = 0
-    column = 0
-    
-    if a == '11' :
-        line = 0
-    elif a == '22' :
-        line = 1
-    elif a == '21' :
-        line = 2
-        
-    if b == '11' :
-        column = 0
-    elif b == '22' :
-        column = 1
-    elif b == '21' :
-        column = 2  
-        
-    return (line, column)      
-        
+      
         
 
 def compute_errorpropag_ref(fen) :
@@ -715,7 +677,6 @@ def compute_errorpropag_ref(fen) :
     
     
     popup('Computing distances between moments done.', time_end - time_start)
-
 
 
 # Computes the error propagation and stores it in a file
@@ -958,23 +919,20 @@ def rank_descriptors(fen) :
     rank_descriptors_file_errorpropag(fen, name, 'b')
     
     plt.show()
-    
 
-def rank_descriptors_file_errorpropag(fen, name, color, label=None, strings_input=[], coeff='', save=False) : 
-    
-    gt = filedialog.askdirectory(title='Choose a ground truth', initialdir=name)
+
+
+
+
+
+def rank_descriptors_file_errorpropag(name, coeff, strings_input=[]) :
+    gt = name
     
     if not ('groundtruth' in gt or 'comparison' in gt) :
         popup('Invalid input')
         return
     
-    if coeff == '' :
-        indext = what_coeff(fen)
-        indexm = indext_to_indexm(indext)
-        coeff = 'C' + indext
     
-    correlations_pearson = []
-    associated_strings_pearson = []
     correlations_spearman = []
     associated_strings_spearman = []
     
@@ -983,6 +941,7 @@ def rank_descriptors_file_errorpropag(fen, name, color, label=None, strings_inpu
     name_c = gt + '/' + coeff
     
     for d in descriptors_name :
+ 
         name_d = name_c + '/' + d + '.txt'
         
         with open(name_d, 'r') as f :
@@ -1004,16 +963,12 @@ def rank_descriptors_file_errorpropag(fen, name, color, label=None, strings_inpu
                 df = pd.DataFrame(data)
                 
                 spearman = df['y'].corr(df['x'], method='spearman')
-                pearson = df['y'].corr(df['x'], method='pearson')
                 
                 correlations_spearman.append(spearman)
-                correlations_pearson.append(pearson)
                 if p == 0 :
                     associated_strings_spearman.append(coeff + ' : ' + str(d) + ' EMD : ' + ' Spearman correlation coefficient : ')
-                    associated_strings_pearson.append(coeff + ' : ' + str(d) + ' EMD : ' + ' Pearson correlation coefficient : ')
                 else : 
-                    associated_strings_spearman.append(coeff + ' : ' + str(d) + ' moment of order : ' + str(p) + ' Spearman correlation coefficient : ')
-                    associated_strings_pearson.append(coeff + ' : ' + str(d) + ' moment of order : ' + str(p) + ' Pearson correlation coefficient : ')
+                    associated_strings_spearman.append(coeff + ' : ' + str(d) + ' moment of order :' + str(p) + ' Spearman correlation coefficient : ')
                 
     descriptors = correlation_descriptors.copy()
     if not 'Volume fraction' in descriptors :
@@ -1039,57 +994,28 @@ def rank_descriptors_file_errorpropag(fen, name, color, label=None, strings_inpu
             df = pd.DataFrame(data)
             
             spearman = df['y'].corr(df['x'], method='spearman')
-            pearson = df['y'].corr(df['x'], method='pearson')
             
             correlations_spearman.append(spearman)
-            correlations_pearson.append(pearson)
 
             associated_strings_spearman.append(coeff + ' : ' + str(d) + ' EMD : ' + ' Spearman correlation coefficient : ')
-            associated_strings_pearson.append(coeff + ' : ' + str(d) + ' EMD : ' + ' Pearson correlation coefficient : ')
               
-    
-    tuples_pearson = list(zip(correlations_pearson, associated_strings_pearson))   
-    sorted_tuples_pearson = sorted(tuples_pearson, key= lambda x: x[0])    
-    sorted_tuples_abs_pearson = sorted(tuples_pearson, key= lambda x: abs(x[0]))
-    reversed_tuples_pearson = reversed(sorted_tuples_abs_pearson)
-    
     tuples_spearman = list(zip(correlations_spearman, associated_strings_spearman))   
-    sorted_tuples_spearman = sorted(tuples_spearman, key= lambda x: x[0])    
     sorted_tuples_abs_spearman = sorted(tuples_spearman, key= lambda x: abs(x[0]))
-    reversed_tuples_spearman = reversed(sorted_tuples_abs_spearman)
-    
-    corr_list_pearson = []
-    string_list_pearson = []
     
     corr_list_spearman = []
     string_list_spearman = []
     
     
     if strings_input != [] :
-        string_input_pearson = strings_input[0]
-        string_input_spearman = strings_input[1]
+        string_input_spearman = strings_input
     
-    for corr, string in sorted_tuples_pearson :
-        string_list_pearson.append(string)
-        corr_list_pearson.append(corr)
+
         
-    for corr, string in sorted_tuples_spearman :
+    for corr, string in sorted_tuples_abs_spearman :
         string_list_spearman.append(string)
         corr_list_spearman.append(corr)    
         
     if strings_input != [] :
-        
-        tmp_corr = []
-        tmp_str = []
-        
-        for string_i in string_input_pearson :
-            
-            index = string_list_pearson.index(string_i)
-            tmp_corr.append(corr_list_pearson[index])
-            tmp_str.append(string_list_pearson[index])
-            
-        corr_list_pearson = tmp_corr
-        string_list_pearson = tmp_str
         
         tmp_corr = []
         tmp_str = []
@@ -1104,71 +1030,37 @@ def rank_descriptors_file_errorpropag(fen, name, color, label=None, strings_inpu
         string_list_spearman= tmp_str
             
             
-    x = np.arange(1, len(corr_list_pearson)+1, 1)
-    
-    fig = plt.gcf()
-    (ax1, ax2) = fig.get_axes()
+    x = np.arange(1, len(corr_list_spearman)+1, 1)
     
     
-    if label == None :
-        
-        for i, (x_val, y_val) in enumerate(zip(x, corr_list_pearson), 1) :
-            ax1.scatter(x_val, y_val, marker = '+', color=color)
-            ax1.text(x_val, y_val, str(len(corr_list_pearson) - i + 1), ha='center', va='bottom')
-        ax1.set_title('Pearson correlation coefficient')
-        
-        ax1.legend([str(i+1) + ' ' + s.split(':')[1].split(' ')[1] for i, s in enumerate(reversed(string_list_pearson))], loc='center left', bbox_to_anchor=(1, 0.5), title='Legend')
-        
-        for i, (x_val, y_val) in enumerate(zip(x, corr_list_spearman), 1) :
-            ax2.scatter(x_val, y_val, marker = '+', color=color)
-            ax2.text(x_val, y_val, str(len(corr_list_spearman) - i + 1), ha='center', va='bottom')
-        ax2.set_title('Spearman correlation coefficient')
-        ax2.legend([str(i+1) + ' ' +  s.split(':')[1].split(' ')[1] for i, s in enumerate(reversed(string_list_spearman))], loc='center left', bbox_to_anchor=(1, 0.5), title='Legend')
-        
-        
-        
-    else :
-        
-        for i, (x_val, y_val) in enumerate(zip(x, corr_list_pearson), 1) :
-            ax1.scatter(x_val, y_val, marker = '+', color=color, label=label)
-            ax1.text(x_val, y_val, str(len(corr_list_pearson) - i + 1), ha='center', va='bottom')
-        ax1.set_title('Pearson correlation coefficient')
-        ax1.legend([str(i+1) + ' ' +  s.split(':')[1].split(' ')[1] for i, s in enumerate(reversed(string_list_pearson))], loc='center left', bbox_to_anchor=(1, 0.5), title='Legend')
-        
-        for i, (x_val, y_val) in enumerate(zip(x, corr_list_spearman), 1) :
-            ax2.scatter(x_val, y_val, marker = '+', color=color, label=label)
-            ax2.text(x_val, y_val, str(len(corr_list_spearman) - i + 1), ha='center', va='bottom')
-        ax2.set_title('Spearman correlation coefficient')
-        ax2.legend([str(i+1) + ' ' +  s.split(':')[1].split(' ')[1] for i, s in enumerate(reversed(string_list_spearman))], loc='center left', bbox_to_anchor=(1, 0.5), title='Legend')
+    label_spearman = [str(i+1) + ' ' +  "".join(s.split('Spearman')[0].split(':')[1:3])  for i, s in enumerate(reversed(string_list_spearman))]
+    
+    label_spearman = convert_moment(label_spearman)
     
     
-    ax1.set_xlabel('Descriptor index')
-    ax2.set_xlabel('Descriptor index')
-    ax1.set_xticks([])
-    ax2.set_xticks([])
     
-    # Apparently it does not allow for the program to keep running as would be intended
-    window_descr_rank(fen, reversed_tuples_pearson, coeff, save)
-    window_descr_rank(fen, reversed_tuples_spearman, coeff, save)
+    bars = plt.barh(label_spearman[::-1], corr_list_spearman, label=label_spearman, color='skyblue')
+
+
+    plt.suptitle('Spearman correlation to the stiffness')
+
+    for bar in bars:
+        width = bar.get_width()
+        label_x_pos = width + 0.02
+        plt.text(label_x_pos, bar.get_y() + bar.get_height()/2, f'{width:.2f}', va='center')
     
-    return [string_list_pearson, string_list_spearman]
+    plt.xticks(np.arange(-1, 1.1, 0.25), labels=['-1', '-0.75', '-0.5', '-0.25', '0', '0.25', '0.5', '0.75', '1'])
+    
+    
+    return string_list_spearman
+
 
     
-# Plots the correlation for error propagation but does not show it
-# Also shows the ranking of the descriptors as a list     
-def rank_descriptors_v3_stiffness(fen, name, color, label=None, strings_input=[], coeff='', save=False) : 
+def rank_descriptors_file(name, color, coeff, marker, label, strings_input=[]) :
     
-    
-    if coeff == '' :
-        indext = what_coeff(fen)
-        indexm = indext_to_indexm(indext)
-        coeff = 'C' + indext
-    
-    else :
-        indexm = indext_to_indexm(coeff[1:5])
-    
-    correlations_pearson = []
-    associated_strings_pearson = []
+   
+    indexm = indext_to_indexm(coeff[1:5])
+   
     correlations_spearman = []
     associated_strings_spearman = []
     
@@ -1179,6 +1071,7 @@ def rank_descriptors_v3_stiffness(fen, name, color, label=None, strings_input=[]
     
     
     stiffness_list = []
+    
     
     
     for path in consistent_tensors_full :
@@ -1196,9 +1089,9 @@ def rank_descriptors_v3_stiffness(fen, name, color, label=None, strings_input=[]
             
                 tensor_name = os.path.basename(path).split('_')[0]
                 img_char_path = os.path.join(name, 'images_characteristics', tensor_name)
-                npys = [file for file in glob.glob(img_char_path + '/*.npy') if not '_r' in file]
                 
                 distributions = read_distributions(os.path.join(img_char_path,  tensor_name + '_distributions.txt'))
+                
                 
                 x.append(distributions[d][1][p])
             
@@ -1210,21 +1103,37 @@ def rank_descriptors_v3_stiffness(fen, name, color, label=None, strings_input=[]
             df = pd.DataFrame(data)
             
             spearman = df['y'].corr(df['x'], method='spearman')
-            pearson = df['y'].corr(df['x'], method='pearson')
             
             
             correlations_spearman.append(spearman)
-            correlations_pearson.append(pearson) 
             
             associated_strings_spearman.append(coeff + ' : ' + descr + ' moment of order : ' + str(p) + ' Spearman correlation coefficient : ')
-            associated_strings_pearson.append(coeff + ' : ' + descr + ' moment of order : ' + str(p) + ' Pearson correlation coefficient : ')
     
+    vfs = []
+    for path in consistent_tensors_full :    
+            
+        tensor_name = os.path.basename(path).split('_')[0]
+        path = os.path.join(name, 'images_characteristics', tensor_name, tensor_name + '_characteristics.txt')
+        vfs.append(read_vf(path))
+        
+    data = {
+        'x' : vfs,
+        'y' : stiffness_list
+    }
+    df = pd.DataFrame(data)
+    
+    spearman = df['y'].corr(df['x'], method='spearman')
+    
+    
+    correlations_spearman.append(spearman)
+    
+    associated_strings_spearman.append(coeff + ' : Volume fraction Spearman correlation coefficient : ')
     
     norms_s2 = []
     norms_c = []
     norms_lp = []
     norms_cld_angular = []
-    
+    means_cld_angular = []
         
 
     for path in consistent_tensors_full :    
@@ -1233,11 +1142,11 @@ def rank_descriptors_v3_stiffness(fen, name, color, label=None, strings_input=[]
         img_char_path = os.path.join(name, 'images_characteristics', tensor_name)
         
         auto_correlation = np.load(os.path.join(img_char_path, tensor_name + '_s2.npy'))
-        norm_s2 = np.linalg.norm(auto_correlation[0,:,:,0], ord='fro')
+        norm_s2 = np.linalg.norm(auto_correlation, ord='fro')
         norms_s2.append(norm_s2)
         
         cluster = np.load(os.path.join(img_char_path, tensor_name + '_cluster.npy'))
-        norm_c = np.linalg.norm(cluster[:,:,0], ord='fro')
+        norm_c = np.linalg.norm(cluster, ord='fro')
         norms_c.append(norm_c)
         
         lp = np.load(os.path.join(img_char_path, tensor_name + '_lp.npy'))
@@ -1247,6 +1156,8 @@ def rank_descriptors_v3_stiffness(fen, name, color, label=None, strings_input=[]
         cld_angular = np.load(os.path.join(img_char_path, tensor_name + '_cld_angular.npy'), allow_pickle=True)
         pdfs_cld_angular = [d.pdf for d in cld_angular]
         norm_cld_angular = np.linalg.norm(pdfs_cld_angular, ord='fro')
+        mean_cld_angular = np.mean(pdfs_cld_angular)
+        means_cld_angular.append(mean_cld_angular)
         norms_cld_angular.append(norm_cld_angular)
         
     norms = [[norms_s2, 'S2'], [norms_c, 'Cluster'], [norms_lp, 'Lineal Path'], [norms_cld_angular, 'CLDa']]   
@@ -1257,61 +1168,40 @@ def rank_descriptors_v3_stiffness(fen, name, color, label=None, strings_input=[]
             'y' : stiffness_list
         }
         df = pd.DataFrame(data)
-        
         spearman = df['y'].corr(df['x'], method='spearman')
-        pearson = df['y'].corr(df['x'], method='pearson')
-        
         
         correlations_spearman.append(spearman)
-        correlations_pearson.append(pearson) 
-        
         associated_strings_spearman.append(coeff + ' : ' + norm[1] + ' Frobenius norm' + ' Spearman correlation coefficient : ')
-        associated_strings_pearson.append(coeff + ' : ' + norm[1] + ' Frobenius norm' + ' Pearson correlation coefficient : ')
+  
+    data = {
+        'x' : means_cld_angular,
+        'y' : stiffness_list
+    }
+    df = pd.DataFrame(data)
+    
+    spearman = df['y'].corr(df['x'], method='spearman')
+    
+    correlations_spearman.append(spearman)
+    associated_strings_spearman.append(coeff + ' : CLDa moment of order : 1 Spearman correlation coefficient : ')
                     
-                    
-            
-    tuples_pearson = list(zip(correlations_pearson, associated_strings_pearson))   
-    sorted_tuples_pearson = sorted(tuples_pearson, key= lambda x: x[0])    
-    sorted_tuples_abs_pearson = sorted(tuples_pearson, key= lambda x: abs(x[0]))
-    reversed_tuples_pearson = reversed(sorted_tuples_pearson)
     
     tuples_spearman = list(zip(correlations_spearman, associated_strings_spearman))   
-    sorted_tuples_spearman = sorted(tuples_spearman, key= lambda x: x[0])    
     sorted_tuples_abs_spearman = sorted(tuples_spearman, key= lambda x: abs(x[0]))
-    reversed_tuples_spearman = reversed(sorted_tuples_spearman)
     
-    corr_list_pearson = []
-    string_list_pearson = []
     
     corr_list_spearman = []
     string_list_spearman = []
     
     
     if strings_input != [] :
-        string_input_pearson = strings_input[0]
-        string_input_spearman = strings_input[1]
+        string_input_spearman = strings_input
     
-    for corr, string in sorted_tuples_pearson :
-        string_list_pearson.append(string)
-        corr_list_pearson.append(corr)
-        
-    for corr, string in sorted_tuples_spearman :
+    for corr, string in sorted_tuples_abs_spearman :
         string_list_spearman.append(string)
         corr_list_spearman.append(corr)    
         
     if strings_input != [] :
         
-        tmp_corr = []
-        tmp_str = []
-        
-        for string_i in string_input_pearson :
-            
-            index = string_list_pearson.index(string_i)
-            tmp_corr.append(corr_list_pearson[index])
-            tmp_str.append(string_list_pearson[index])
-            
-        corr_list_pearson = tmp_corr
-        string_list_pearson = tmp_str
         
         tmp_corr = []
         tmp_str = []
@@ -1326,56 +1216,80 @@ def rank_descriptors_v3_stiffness(fen, name, color, label=None, strings_input=[]
         string_list_spearman= tmp_str
             
             
-    x = np.arange(1, len(corr_list_pearson)+1, 1)
+    x = np.arange(1, len(corr_list_spearman)+1, 1)
     
-    fig = plt.gcf()
-    (ax1, ax2) = fig.get_axes()
-    
-    
-    if label == None :
-        
-        for i, (x_val, y_val) in enumerate(zip(x, corr_list_pearson), 1) :
-            ax1.scatter(x_val, y_val, marker = '+', color=color)
-            ax1.text(x_val, y_val, str(len(corr_list_pearson) - i + 1), ha='center', va='bottom')
-        ax1.set_title('Pearson correlation coefficient')
-        
-        ax1.legend([str(i+1) + ' ' + s.split(':')[1].split(' ')[1] for i, s in enumerate(reversed(string_list_pearson))], loc='center left', bbox_to_anchor=(1, 0.5), title='Legend')
-        
-        for i, (x_val, y_val) in enumerate(zip(x, corr_list_spearman), 1) :
-            ax2.scatter(x_val, y_val, marker = '+', color=color)
-            ax2.text(x_val, y_val, str(len(corr_list_spearman) - i + 1), ha='center', va='bottom')
-        ax2.set_title('Spearman correlation coefficient')
-        ax2.legend([str(i+1) + ' ' +  s.split(':')[1].split(' ')[1] for i, s in enumerate(reversed(string_list_spearman))], loc='center left', bbox_to_anchor=(1, 0.5), title='Legend')
-        
-        
-        
-    else :
-        
-        for i, (x_val, y_val) in enumerate(zip(x, corr_list_pearson), 1) :
-            ax1.scatter(x_val, y_val, marker = '+', color=color, label=label)
-            ax1.text(x_val, y_val, str(len(corr_list_pearson) - i + 1), ha='center', va='bottom')
-        ax1.set_title('Pearson correlation coefficient')
-        ax1.legend([str(i+1) + ' ' +  s.split(':')[1].split(' ')[1] for i, s in enumerate(reversed(string_list_pearson))], loc='center left', bbox_to_anchor=(1, 0.5), title='Legend')
-        
-        for i, (x_val, y_val) in enumerate(zip(x, corr_list_spearman), 1) :
-            ax2.scatter(x_val, y_val, marker = '+', color=color, label=label)
-            ax2.text(x_val, y_val, str(len(corr_list_spearman) - i + 1), ha='center', va='bottom')
-        ax2.set_title('Spearman correlation coefficient')
-        ax2.legend([str(i+1) + ' ' +  s.split(':')[1].split(' ')[1] for i, s in enumerate(reversed(string_list_spearman))], loc='center left', bbox_to_anchor=(1, 0.5), title='Legend')
+
+    for i, (x_val, y_val) in enumerate(zip(x, corr_list_spearman), 1) :
+        plt.plot(x_val, y_val, marker = marker, color=color, label=label, linestyle='--')
+    plt.legend(convert_moment([str(i+1) + ' ' +  "".join(s.split('Spearman')[0].split(':')[1:3])  for i, s in enumerate(reversed(string_list_spearman))]), loc='center left', bbox_to_anchor=(1, 0.5), title='Legend')
     
     
-    ax1.set_xlabel('Descriptor index')
-    ax2.set_xlabel('Descriptor index')
-    ax1.set_xticks([])
-    ax2.set_xticks([])
-    
+    plt.xlabel('Descriptor index')
+    plt.xticks(np.arange(1, len(corr_list_spearman) + 1), labels=np.arange(len(corr_list_spearman), 0, -1))
+    plt.ylabel('Spearman correlation coefficient')
    
-    # Apparently it does not allow for the program to keep running as would be intended
-    window_descr_rank(fen, reversed_tuples_pearson, coeff, save)
-    window_descr_rank(fen, reversed_tuples_spearman, coeff, save)
+    return string_list_spearman
     
-    return [string_list_pearson, string_list_spearman]
     
+def plot_stiffness_file(working_folder, descr, color) :
+    
+    consistent = os.path.join(working_folder, 'consistent_tensors')
+    tensors = os.listdir(consistent)
+    
+    if '.DS_Store' in tensors :
+        tensors.remove('.DS_Store')
+    
+    nb_descriptors = len(descriptors_name)
+    
+    #[descriptor[moments]]
+    # To adapt depending on the number of descriptors        
+    descriptors = [[[],[],[]],[[],[],[]],[[],[],[]],[[],[],[]],[[],[],[]]]
+    stiffness = [[[],[],[]],[[],[],[]],[[],[],[]]]
+    
+    vf = []
+    
+    characteristics = os.path.join(working_folder, 'images_characteristics')
+    
+    for tensor in tensors :
+        
+        name = tensor.split('_')[0]
+        
+        t = read_tensor_fullname(os.path.join(consistent, tensor))
+        
+        for i in range(3) :
+            for j in range(3) :
+                stiffness[i][j].append(float(t[i][j]))
+        
+
+        distr_name = characteristics + '/' + name + '/' + name + '_distributions.txt'
+        distr = read_distributions(distr_name)
+
+        vf.append(read_vf(characteristics + '/' + name + '/' + name + '_characteristics.txt'))
+        
+        for k in range(nb_descriptors) :
+            descriptors[k][0].append(distr[k][1][1])
+            descriptors[k][1].append(distr[k][1][2])
+            descriptors[k][2].append(distr[k][1][3])
+    
+    k = descriptors_name.index(descr)
+    moment = 0
+        
+    for m in range(3) :
+        for n in range(3) :
+            x = descriptors[k][moment]
+            y = stiffness[m][n]
+            
+            fig = plt.gcf()
+            axs = fig.get_axes()
+            
+            a, b = indexm_to_indext(m,n)
+            
+            axs[3*m + n].plot(x, y, 'r+', color=color)
+            axs[3*m + n].set_title('C' + str(a) + str(b))
+        
+        plt.tight_layout()
+   
+  
     
 def window_descr_rank(fen, reversed_tuples, coeff, save) :    
     p = tk.Toplevel(fen)
@@ -1425,42 +1339,14 @@ def window_descr_rank(fen, reversed_tuples, coeff, save) :
         
         
     
+   
 
-
-def compare_trials(fen) :
-    trial1 = filedialog.askdirectory(initialdir=simulation_dir)
-    trial2 = filedialog.askdirectory(initialdir=simulation_dir)
     
-    plt.subplots(1, 2)
-    
-    if not 'Essai' in trial1 or not 'Essai' in trial2 or trial1 == trial2 :
-        popup('Invalid input !')
-        return
-    
-    coeff = what_coeff(fen)
-    coeff = 'C' + coeff
-    
-    string_list_1 = rank_descriptors_v3_stiffness(fen, trial1, 'b', label=os.path.basename(trial1), coeff=coeff)
-    string_list_2 = rank_descriptors_v3_stiffness(fen, trial2, 'r', label=os.path.basename(trial2), strings_input=string_list_1, coeff=coeff)
-    
-    fig = plt.gcf()
-    axes = fig.get_axes()
-    
-    
-    fig.suptitle('Correlation of each descriptor to the stiffness component ' + coeff)
-    plt.subplots_adjust(wspace=0.36, hspace=0.4, left=0.037, right=0.89)
-    
-    plt.show()
-    
-    trial1_bn = os.path.basename(trial1)
-    trial2_bn = os.path.basename(trial2)
-    
-    dir_name = simulation_dir + '/' + trial1_bn + ' - ' + trial2_bn
-    
-    create_dir(dir_name)
-    
-    tensors_file = dir_name + '/compared_tensors.txt'
+def compute_comparison(fen, trial1, trial2) :
+    dir_name = trial2
     comparison_dir = dir_name +'/comparison'
+    tensors_file = comparison_dir + '/compared_tensors.txt'
+    
     
     nb_descriptors = len(descriptors_name)
     
@@ -1471,10 +1357,14 @@ def compare_trials(fen) :
         if overwrite_bool :
             subprocess.run(['rm', tensors_file])
             subprocess.run(['rm', comparison_dir])
+            #os.remove(comparison_dir)
+            #os.remove(tensors_file)
         
     
     
     time_start = time.time()
+    
+    create_dir(comparison_dir)
     
     tensors_trial1 = consistent_tensors_folder(trial1)
     tensors_trial2 = consistent_tensors_folder(trial2)
@@ -1489,7 +1379,7 @@ def compare_trials(fen) :
         for t in to_compare :
             f.write(t + '\n')
                 
-    create_dir(comparison_dir)
+    
     
     for m in range(3) :
         for n in range(3) :
@@ -1501,29 +1391,45 @@ def compare_trials(fen) :
             
             for k in range(nb_descriptors) :
                 # I don't know why but x = 4*[[]] does not work (the elements are appened to every list)
-                x = [[], [], [], []]
-                y = []
+                x1 = [[], [], [], []]
+                y1 = []
+                x2 = [[], [], [], []]
+                y2 = []
                 
                 for t in to_compare :
                     
                     t1 = os.path.join(trial1, 'consistent_tensors', t + '_effective_stiffness.txt')
                     t2 = os.path.join(trial2, 'consistent_tensors', t + '_effective_stiffness.txt')
                     
+                
                     distr1 = os.path.join(trial1, 'images_characteristics', t, t + '_distributions.txt')
                     distr2 = os.path.join(trial2, 'images_characteristics', t, t + '_distributions.txt')
+            
+                    distr3 = os.path.join(trial1, 'images_characteristics', t, t + '_distributions_adim.txt')
+                    distr4 = os.path.join(trial2, 'images_characteristics', t, t + '_distributions_adim.txt')
                     
-                    point = compute_error_fullname(t1, t2, distr1, distr2, m, n)
+                    point1 = compute_error_fullname(t1, t2, distr1, distr2, m, n)
+                    point2 = compute_error_fullname(t1, t2, distr3, distr4, m, n)
                     # Up to third moment
                     for p in range(4) :
-                        x[p].append(point[0][k][p])
-                    y.append(point[-1])
+                        x1[p].append(point1[0][k][p])
+                        x2[p].append(point2[0][k][p])
+                    y1.append(point1[-1])
+                    y2.append(point2[-1])
 
-                name_coeff_descr = name_coeff + '/' + descriptors_name[k] + '.txt'
-                create_file(name_coeff_descr)
+               
+                name_coeff_descr1 = name_coeff + '/' + descriptors_name[k] + '.txt'
+                name_coeff_descr2 = name_coeff + '/' + descriptors_name[k] + '_adim.txt'
+                create_file(name_coeff_descr1)
+                create_file(name_coeff_descr2)
                 
-                with open(name_coeff_descr, 'w') as f :
-                    f.write(str(x) + '\n')
-                    f.write(str(y) + '\n')
+                with open(name_coeff_descr1, 'w') as f :
+                    f.write(str(x1) + '\n')
+                    f.write(str(y1) + '\n')
+                    
+                with open(name_coeff_descr2, 'w') as f :
+                    f.write(str(x2) + '\n')
+                    f.write(str(y2) + '\n')
                         
             x = []
             y = []        
@@ -1576,33 +1482,252 @@ def compare_trials(fen) :
         
     time_end = time.time()
     popup('Computation done', time_end - time_start)
-           
-    graphs_dir = dir_name + '/' + 'graphs'
+   
+
+
+def compare_trials_init(fen) :
+    trial1 = filedialog.askdirectory(initialdir=simulation_dir)
+    trial2 = filedialog.askdirectory(initialdir=simulation_dir)
     
+    if not trial1.split('/')[-2] in samples_names or not trial2.split('/')[-2] in samples_names :
+        popup('Invalid input !')
+        return
+    
+    if not trial1.split('/')[-1] in tests_names or not trial2.split('/')[-1] in tests_names :
+        popup('Invalid input !')
+        return
+
+    compare_trials_fen(fen, trial1, trial2)
+    
+
+def evolution_stiffness(fen, trial1) :
+    popup('The following graph shows the evolution of the correlation to the stiffness for each descriptor.\n \
+        (Your Trial 2 input is not taken into account.)')
+    
+    
+    
+    #adim_bool = overwrite(fen, 'Would you like to see the results as a function of the CoV, std, and skw coeff ?')
+    
+    again = True
+    
+    # To adapt depending on the number of perturbations
+    colors = ['aquamarine', 'blue', 'coral', 'red', 'orchid', 'fuchsia']
+    #['ANI-20', 'ANI-40', 'ISO-20', 'ISO-40', 'DEL-20', 'DEL-40']
+    markers = ['.', 'o', 'v', '^', 's', 'p']
+    
+    labels = ''
+    for i in range(len(perturbations_names)) :
+        
+        labels += perturbations_names[i] + ' : ' + colors[i] + '\n'
+        
+    popup(labels)
+        
+    
+    while again :
+        again = False
+        coeff = what_coeff(fen)
+        coeff = 'C' + coeff
+        
+        #plt.subplots(1, 2)
+        plt.rcParams['font.family'] = 'serif'
+        plt.rcParams['font.serif'] = ['Times New Roman']
+        plt.figure(figsize=(12,9))
+        
+      
+        #string_list_1 = rank_descriptors_v3_file(fen, trial1, 'black', label=os.path.basename(trial1), coeff=coeff, adim_bool=adim_bool)
+        
+        string_list = rank_descriptors_file(trial1, 'black', coeff, '+', os.path.basename(trial1))
+        
+        trials = perturbations_names
+        
+        
+        
+        for i, trial in enumerate(trials) :
+            name = trial1.replace(os.path.basename(trial1), '') + trial
+            try :
+                #rank_descriptors_v3_file(fen, name, colors[i], label=os.path.basename(name), strings_input=string_list_1, coeff=coeff, adim_bool=adim_bool)
+                rank_descriptors_file(name, colors[i], coeff, markers[i], os.path.basename(name), strings_input=string_list)
+            except FileNotFoundError as e :
+                popup('File not found : ' + e.filename)
+            finally :
+                continue
+        
+       
+        
+   
+        
+        plt.suptitle('Correlation of each descriptor to the stiffness component ' + coeff)
+        #plt.subplots_adjust(wspace=0.36, hspace=0.4, left=0.037, right=0.89)
+        
+        name = trial1.split('/')[-2] + '-EVOL-' + coeff + '.png'
+        path = os.path.join('/Users/tmr96/Documents/Graphs folder', name)
+        plt.tight_layout()
+        plt.savefig(path)
+        
+        plt.show()
+        
+        
+        
+        
+        
+        again = overwrite(fen, 'Would you want to see the results for another coefficient ?')
+    
+def compare_errorpropag(fen, trial1, trial2) :
+    
+    dir_name = trial2
+    comparison_dir = dir_name +'/comparison'
+    graphs_dir = dir_name + '/graphs_comparison'
+    
+    adim_bool = overwrite(fen, 'Would you like to see the results as a function of the CoV, std, and skw coeff ?')
     
     if overwrite(fen, label='Would you want to see all the graphs ?') : 
         create_dir(graphs_dir)
         plot_errorpropag_fullname(fen, comparison_dir, graphs_dir)
     
-    coeff = what_coeff(fen)
-    coeff = 'C' + coeff
+    again = True
     
-    plt.subplots(1, 2)
-    try : 
-        rank_descriptors_file_errorpropag(fen, comparison_dir, color='blue', coeff=coeff, save=True)
-    except FileNotFoundError :
-        popup('Correlation not computed for this coefficient !')
-        return
-    fig = plt.gcf()
-    fig.suptitle('Correlation of each descriptor to the error propagation for ' + coeff)
-    plt.subplots_adjust(wspace=0.36, hspace=0.4, left=0.037, right=0.89)
-    plt.show()
+    while again :
+        again = False
     
-# To choose working directory
-def choose_wd() :
-    global working_dir
-    working_dir = filedialog.askdirectory(initialdir=working_dir)
+        coeff = what_coeff(fen)
+        coeff = 'C' + coeff
+        
+        screen_width = fen.winfo_screenwidth()
+        screen_height = fen.winfo_screenheight()
+        dpi = 100.0  
+        fig_width = screen_width / dpi
+        fig_height = screen_height / dpi
+        
+        fig = plt.figure(figsize=(fig_width, fig_height))
+        plt.rcParams['font.family'] = 'serif'
+        plt.rcParams['font.serif'] = ['Times New Roman']
+        try : 
+            #rank_descriptors_v3_file_errorpropag_spearman(fen, comparison_dir, color='blue', coeff=coeff, save=True, adim_bool=adim_bool)
+            rank_descriptors_file_errorpropag(comparison_dir, coeff)
+        except FileNotFoundError as e :
+            popup('Correlation not computed for this coefficient !')
+            print(e.filename)
+            return
+        
+        fig.suptitle('Correlation of each descriptor to the error propagation for ' + coeff)
     
+        create_dir(graphs_dir)
+        name = trial1.split('/')[-2] + '-' + os.path.basename(trial2) + '-' + coeff
+        
+        if adim_bool :
+            name += '_adim'
+        
+        name += '.png'
+        
+        path = os.path.join('/Users/tmr96/Documents/Graphs folder', name)
+        
+        
+        plt.tight_layout()
+        plt.savefig(path)
+        plt.show()
+    
+        again = overwrite(fen, 'Do you want to see the results for another coefficient ?')
+    
+def compare_plot_stiffness(fen, trial1, trial2) :
+    
+    again = True
+    while again :
+        again = False
+        descr = what_descriptor(fen)
+
+        
+        fig, axs = plt.subplots(3, 3, figsize=(14, 12))
+        
+        plot_stiffness_file(trial1, descr, 'red')
+        plot_stiffness_file(trial2, descr, 'blue')
+        
+        code1 = ' '.join(trial1.split('/')[-2::1])
+        code2 = ' '.join(trial2.split('/')[-2::1])
+        
+        title = f'Stiffness as a function of the {descr} for simulations {code1} and {code2}'
+        
+       
+        fig.suptitle(title)
+        
+        
+        plt.show()
+
+        again = overwrite(fen, 'Do you want to see the results for another descriptor ?')
+    
+
+def compare_plot_stiffness_all(fen, trial1) :
+    
+    popup('The following graph shows the evolution of the correlation to the stiffness for each descriptor.\n \
+        (Your Trial 2 input is not taken into account.)')
+    
+    again = True
+    
+    
+    trials = [trial1.replace('REF', '') + p for p in perturbations_names]
+    # To adapt depending on the number of perturbations
+    colors = ['aquamarine', 'blue', 'coral', 'red', 'orchid', 'fuchsia']
+    #['ANI-20', 'ANI-40', 'ISO-20', 'ISO-40', 'DEL-20', 'DEL-40'] 
+    
+    while again :
+        again = False
+        
+        descr = what_descriptor(fen)
+        
+        fig, axs = plt.subplots(3, 3, figsize=(14, 12))
+        
+        plot_stiffness_file(trial1, descr, 'black')
+        
+        for x, t in enumerate(trials) :
+            try :
+                plot_stiffness_file(t, descr, colors[x])
+            except FileNotFoundError as e :
+                popup('File not found : ' + e.filename)
+                continue
+        
+        code1 = ' '.join(trial1.split('/')[-2:-1:1])
+        
+        title = f'Stiffness as a function of the {descr} for simulation {code1}'
+        
+       
+        fig.suptitle(title)
+        
+        
+        plt.show()
+
+        again = overwrite(fen, 'Do you want to see the results for another descriptor ?')
+    
+    
+    return
+
+     
+  
+    
+def compare_trials_fen(fen, trial1, trial2) :
+    
+    code1 = ' '.join(trial1.split('/')[-2::1])
+    code2 = ' '.join(trial2.split('/')[-2::1])
+    
+    p = tk.Toplevel(fen)
+    
+    p.wm_title(f'Compare {code1} and {code2}')
+    
+    compute_btn = tk.Button(p, text='Run the computation', command= lambda : compute_comparison(p, trial1, trial2))
+    compute_btn.pack()
+    
+    evolution_btn = tk.Button(p, text='Show the evolution of the correlation to the stiffness', command= lambda : evolution_stiffness(p, trial1))
+    evolution_btn.pack()
+    
+    errorpropag_btn = tk.Button(p, text='Show the correlation to the error propagation', command= lambda : compare_errorpropag(p, trial1, trial2))
+    errorpropag_btn.pack()
+    
+    stiffness_btn = tk.Button(p, text='Plots the stiffness vs the descriptors for one perturbation and the reference', command= lambda : compare_plot_stiffness(p, trial1, trial2))
+    stiffness_btn.pack()
+    
+    stiffness_all_btn = tk.Button(p, text='Plots the stiffness vs the descriptors for all the perturbations and the reference', command= lambda : compare_plot_stiffness_all(p, trial1))
+    stiffness_all_btn.pack()
+    
+    fen.wait_window(p)
+
 
 def main () :
     fen = tk.Tk()
@@ -1651,7 +1776,7 @@ def main () :
     rank_btn = tk.Button(fen, text='Rank descriptors', command= lambda : rank_descriptors(fen))
     rank_btn.pack()
     
-    compare_btn = tk.Button(fen, text='Compare trials', command= lambda : compare_trials(fen))
+    compare_btn = tk.Button(fen, text='Compare trials', command= lambda : compare_trials_init(fen))
     compare_btn.pack()
     
     help_btn = tk.Button(fen, text='Help', command=help)
