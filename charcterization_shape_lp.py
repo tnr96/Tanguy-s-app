@@ -16,16 +16,16 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from utilities import *
 
 # Here you should define the paths on your computer 
-working_dir = '/Users/tmr96/Documents/Automatic'
-moose_dir = '/Users/tmr96/projects/my_files'
+working_dir =  '/Users/ag2556/Documents/CornellPostdoc/Cornell_Projects/MicroDescriptors/revised_correlation_anal'
+moose_dir =  '/Users/ag2556/Documents/CornellPostdoc/Cornell_Projects/MicroDescriptors/revised_simulations/app-results/REAL/DEL-20'
 
 # You don't need to change anything here
 images_path = moose_dir + '/images' # Images folder
-imgchar_path = working_dir + '/images_characteristics' # Where the characteristics of the images are stored
-filtered_path = working_dir + '/filtered_images'
+imgchar_path = moose_dir + '/images_characteristics' # Where the characteristics of the images are stored
+filtered_path = moose_dir + '/filtered_images'
 
 
-cutoff_input = 160
+cutoff_input = 200 # I changed since S2 was computed with that, and images are 400 pixels, cutoff must be half the image size
 
 # Solidity is removed for the moment
 descriptors_name = ['Aspect ratio', 'Extent', 'Size', 'Orientation', 'Solidity'] # List of descriptors used. Be careful with the order

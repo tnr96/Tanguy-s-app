@@ -10,11 +10,11 @@ from tkinter import filedialog
 
 from utilities import *
 
-working_dir = '/Users/tmr96/Documents/Automatic'
-moose_dir = '/Users/tmr96/projects/my_files'
+working_dir = '/Users/ag2556/Documents/CornellPostdoc/Cornell_Projects/MicroDescriptors/revised_correlation_anal'
+moose_dir =  '/Users/ag2556/Documents/CornellPostdoc/Cornell_Projects/MicroDescriptors/revised_simulations/app-results/REAL/DEL-20'
 
 images_path = moose_dir + '/images' # Images folder
-imgchar_path = working_dir + '/images_characteristics' # Where the characteristics of the images are stored
+imgchar_path = moose_dir + '/images_characteristics' # Where the characteristics of the images are stored
 
 def rotate_contour(cnt, angle_in_degrees):
     M = cv2.moments(cnt)

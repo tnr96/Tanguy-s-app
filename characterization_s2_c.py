@@ -23,16 +23,16 @@ import dask.array as da
 from utilities import *
 
 # Here you should define the paths on your computer 
-working_dir = '/Users/tmr96/Documents/Automatic'
-moose_dir = '/Users/tmr96/projects/my_files'
+working_dir = '/Users/ag2556/Documents/CornellPostdoc/Cornell_Projects/MicroDescriptors/revised_correlation_anal'
+moose_dir = '/Users/ag2556/Documents/CornellPostdoc/Cornell_Projects/MicroDescriptors/revised_simulations/app-results/REAL/DEL-20'
 
 # You don't need to change anything here
 images_path = moose_dir + '/images' # Images folder
-imgchar_path = working_dir + '/images_characteristics' # Where the characteristics of the images are stored
-filtered_path = working_dir + '/filtered_images'
-extracted_path = working_dir + '/extracted_inclusions'
+imgchar_path = moose_dir + '/images_characteristics' # Where the characteristics of the images are stored
+filtered_path = moose_dir + '/filtered_images'
+extracted_path = moose_dir + '/extracted_inclusions'
 
-cutoff_input = 160
+cutoff_input = 200 # I CHANGED CUTOFF FROM 160 TO 200, SINCE IT SHOULD CORRESPOND TO HALF THE IMAGE SIZE
 
 # Solidity is removed for the moment
 descriptors_name = ['Aspect ratio', 'Extent', 'Size', 'Orientation', 'Solidity'] # List of descriptors used. Be careful with the order
@@ -139,7 +139,7 @@ def compute_cluster(basename, periodic_bool) :
     
     data_corr = TwoPointCorrelation(
         periodic_boundary = periodic_bool,
-        cutoff = 160, # I can tune the cutoff so that it is just sufficient for the computed two-point cluster function to drop to 0 at large distances
+        cutoff = cutoff_input, # I can tune the cutoff so that it is just sufficient for the computed two-point cluster function to drop to 0 at large distances
         correlations=[(0, 0)]  
     ).transform(data)
     
